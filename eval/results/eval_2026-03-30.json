@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-03-30T17:10:58.553694+00:00",
+  "model": "gpt-4o",
+  "prompt_version": "cv_scoring_v1",
+  "test_cases": 15,
+  "recommendation_accuracy": 0.87,
+  "score_range_accuracy": 0.87,
+  "must_have_detection_accuracy": 0.8,
+  "avg_cost_per_cv_usd": 0.08,
+  "avg_latency_ms": 2800,
+  "total_cost_usd": 1.2
+}

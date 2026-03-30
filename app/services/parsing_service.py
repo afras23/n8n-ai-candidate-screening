@@ -82,6 +82,9 @@ def compute_content_hash(cv_text: str) -> str:
     return hashlib.sha256(normalized_text.encode("utf-8")).hexdigest()
 
 
+TRUNCATION_MAX_CHARS: int = 48_000
+
+
 def _truncate_for_llm(cv_text: str, *, max_chars: int) -> str:
     if len(cv_text) <= max_chars:
         return cv_text
@@ -253,7 +256,7 @@ class CvParsingService:
             ParsingError: If LLM output cannot be validated.
         """
 
-        truncated_cv_text = _truncate_for_llm(cv_text, max_chars=48_000)
+        truncated_cv_text = _truncate_for_llm(cv_text, max_chars=TRUNCATION_MAX_CHARS)
         prompt = _load_cv_parsing_prompt(truncated_cv_text)
         if _guess_non_english(truncated_cv_text):
             logger.warning(

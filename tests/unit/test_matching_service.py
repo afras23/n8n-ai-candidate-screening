@@ -91,3 +91,39 @@ async def test_experience_years_check() -> None:
     job = _job({"experience_years": 4})
     match = await service.match(parsed, job)
     assert match.experience_match is False
+
+
+@pytest.mark.asyncio
+async def test_partial_skill_match_calculated_correctly() -> None:
+    service = JobMatchingService()
+    parsed = ParsedCv(
+        name="x",
+        skills=["Python", "FastAPI"],
+        summary="",
+        experience=[],
+        education=[],
+        certifications=[],
+        languages=[],
+        total_experience_years=5.0,
+    )
+    job = _job({"must_have": ["Python", "FastAPI", "PostgreSQL", "REST APIs"]})
+    match = await service.match(parsed, job)
+    assert match.match_percentage == 0.5
+
+
+@pytest.mark.asyncio
+async def test_experience_slightly_below_requirement() -> None:
+    service = JobMatchingService()
+    parsed = ParsedCv(
+        name="x",
+        skills=["Python"],
+        summary="",
+        experience=[],
+        education=[],
+        certifications=[],
+        languages=[],
+        total_experience_years=3.99,
+    )
+    job = _job({"experience_years": 4})
+    match = await service.match(parsed, job)
+    assert match.experience_match is False

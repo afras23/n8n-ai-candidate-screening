@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
+from pathlib import PurePath
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -60,6 +61,11 @@ def _route_for_recommendation(
     return "email_rejection"
 
 
+def _sanitize_filename(filename: str) -> str:
+    candidate = PurePath(filename).name
+    return candidate[:255] if candidate else "upload"
+
+
 class ScreeningService:
     """Coordinates the screening pipeline behind HTTP routes."""
 
@@ -109,7 +115,8 @@ class ScreeningService:
         job_repo = JobRepository(session)
         screening_repo = ScreeningRepository(session)
 
-        raw_cv_text = parse_file(cv_content, filename)
+        safe_filename = _sanitize_filename(filename)
+        raw_cv_text = parse_file(cv_content, safe_filename)
         parsed_cv = await self._parsing_service.parse_cv(raw_cv_text, filename)
 
         content_hash = compute_content_hash(raw_cv_text)
@@ -163,7 +170,7 @@ class ScreeningService:
             location=parsed_cv.location,
             raw_cv_text=raw_cv_text,
             parsed_cv_json=parsed_cv.model_dump(),
-            source_filename=filename,
+            source_filename=safe_filename,
             content_hash=content_hash,
         )
         await candidate_repo.create(candidate_row)
@@ -195,25 +202,56 @@ class ScreeningService:
                 if scoring_result.recommendation == "shortlist"
                 else "review"
             )
-            await self._ats_client.update_status(str(candidate_row.id), status)
+            try:
+                await self._ats_client.update_status(str(candidate_row.id), status)
+            except Exception as exc:  # noqa: BLE001
+                logger.error(
+                    "ats_update_status_failed",
+                    extra={
+                        "correlation_id": get_correlation_id(),
+                        "candidate_id_value": str(candidate_row.id),
+                        "status_value": status,
+                        "error_type": type(exc).__name__,
+                    },
+                )
         else:
-            await self._email_client.send_rejection(
-                candidate_email=candidate_row.email,
-                candidate_name=candidate_row.name,
-                job_title=job.title,
-            )
+            try:
+                await self._email_client.send_rejection(
+                    candidate_email=candidate_row.email,
+                    candidate_name=candidate_row.name,
+                    job_title=job.title,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.error(
+                    "email_rejection_failed",
+                    extra={
+                        "correlation_id": get_correlation_id(),
+                        "candidate_id_value": str(candidate_row.id),
+                        "error_type": type(exc).__name__,
+                    },
+                )
 
-        await self._sheets_client.append_row(
-            {
-                "candidate_name": candidate_row.name,
-                "candidate_email": candidate_row.email,
-                "job_title": job.title,
-                "overall_score": str(scoring_result.overall_score),
-                "recommendation": scoring_result.recommendation,
-                "match_percentage": str(match_result.match_percentage),
-                "timestamp": datetime.now(UTC).isoformat(),
-            }
-        )
+        try:
+            await self._sheets_client.append_row(
+                {
+                    "candidate_name": candidate_row.name,
+                    "candidate_email": candidate_row.email,
+                    "job_title": job.title,
+                    "overall_score": str(scoring_result.overall_score),
+                    "recommendation": scoring_result.recommendation,
+                    "match_percentage": str(match_result.match_percentage),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "sheets_append_row_failed",
+                extra={
+                    "correlation_id": get_correlation_id(),
+                    "candidate_id_value": str(candidate_row.id),
+                    "error_type": type(exc).__name__,
+                },
+            )
 
         logger.info(
             "screening_pipeline_completed",

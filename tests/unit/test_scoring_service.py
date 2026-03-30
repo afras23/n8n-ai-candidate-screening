@@ -147,3 +147,77 @@ async def test_parametrized_recommendations(
     service = CandidateScoringService(llm_client, _settings())
     result = await service.score_candidate(ParsedCv(name="x"), _job())
     assert result.recommendation == expected
+
+
+@pytest.mark.asyncio
+async def test_perfect_candidate_scores_above_threshold() -> None:
+    llm_client = MagicMock()
+    llm_client.complete = AsyncMock(
+        return_value=MagicMock(
+            content=(
+                '{"criteria_scores":{"technical_skills":{"score":100,"justification":"x"},'
+                '"experience":{"score":100,"justification":"y"}},'
+                '"strengths":["a"],"weaknesses":[],"reasoning":"z","recommendation":"shortlist"}'
+            ),
+            input_tokens=1,
+            output_tokens=1,
+            cost_usd=0.01,
+            latency_ms=1.0,
+            model="gpt-4o",
+            prompt_version="cv_scoring_v1",
+        )
+    )
+    service = CandidateScoringService(llm_client, _settings(shortlist_threshold=80))
+    result = await service.score_candidate(ParsedCv(name="x"), _job())
+    assert result.overall_score >= 80
+    assert result.recommendation == "shortlist"
+
+
+@pytest.mark.asyncio
+async def test_unqualified_candidate_scores_below_threshold() -> None:
+    llm_client = MagicMock()
+    llm_client.complete = AsyncMock(
+        return_value=MagicMock(
+            content=(
+                '{"criteria_scores":{"technical_skills":{"score":0,"justification":"x"},'
+                '"experience":{"score":0,"justification":"y"}},'
+                '"strengths":[],"weaknesses":["a"],"reasoning":"z","recommendation":"reject"}'
+            ),
+            input_tokens=1,
+            output_tokens=1,
+            cost_usd=0.0,
+            latency_ms=1.0,
+            model="gpt-4o",
+            prompt_version="cv_scoring_v1",
+        )
+    )
+    service = CandidateScoringService(llm_client, _settings(review_threshold=50))
+    result = await service.score_candidate(ParsedCv(name="x"), _job())
+    assert result.overall_score < 50
+    assert result.recommendation == "reject"
+
+
+@pytest.mark.asyncio
+async def test_borderline_candidate_routes_to_review() -> None:
+    llm_client = MagicMock()
+    llm_client.complete = AsyncMock(
+        return_value=MagicMock(
+            content=(
+                '{"criteria_scores":{"technical_skills":{"score":50,"justification":"x"},'
+                '"experience":{"score":50,"justification":"y"}},'
+                '"strengths":[],"weaknesses":[],"reasoning":"z","recommendation":"review"}'
+            ),
+            input_tokens=1,
+            output_tokens=1,
+            cost_usd=0.0,
+            latency_ms=1.0,
+            model="gpt-4o",
+            prompt_version="cv_scoring_v1",
+        )
+    )
+    service = CandidateScoringService(
+        llm_client,
+        _settings(shortlist_threshold=80, review_threshold=50),
+    )
+    result = await service.score_candidate(ParsedCv(name="x"), _job())
+    assert result.recommendation == "review"

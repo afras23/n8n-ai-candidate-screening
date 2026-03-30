@@ -34,5 +34,6 @@ clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage
 
 evaluate:
-	@echo "Evaluation pipeline not yet implemented (Phase 4)."
-	@exit 0
+	DATABASE_URL=postgresql+asyncpg://test:test@127.0.0.1:5432/test_db \
+	OPENAI_API_KEY=test-openai-key \
+	PYTHONPATH=. python scripts/evaluate.py
