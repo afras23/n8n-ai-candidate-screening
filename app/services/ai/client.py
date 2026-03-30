@@ -204,7 +204,7 @@ class LlmClient:
             ScoringError: When the provider fails after all retries.
         """
         await self._ensure_pre_call_limits()
-        last_error: BaseException | None = None
+        last_error: Exception | None = None
         started = time.monotonic()
 
         for attempt in range(MAX_LLM_ATTEMPTS):
@@ -258,7 +258,12 @@ class LlmClient:
                 )
             except (CircuitBreakerOpenError, CostLimitExceeded):
                 raise
-            except BaseException as exc:
+            except (
+                APIConnectionError,
+                APITimeoutError,
+                RateLimitError,
+                APIStatusError,
+            ) as exc:
                 last_error = exc
                 if not _is_retryable_error(exc):
                     await self._record_failure()
@@ -266,6 +271,19 @@ class LlmClient:
                         "LLM request failed with non-retryable error",
                         context={"error_type": type(exc).__name__},
                     ) from exc
+                logger.warning(
+                    "llm_request_retryable_error",
+                    extra={
+                        "correlation_id": get_correlation_id(),
+                        "attempt_index": attempt + 1,
+                        "max_attempts": MAX_LLM_ATTEMPTS,
+                        "error_type": type(exc).__name__,
+                    },
+                )
+                if attempt == MAX_LLM_ATTEMPTS - 1:
+                    await self._record_failure()
+            except TimeoutError as exc:
+                last_error = exc
                 logger.warning(
                     "llm_request_retryable_error",
                     extra={

@@ -83,14 +83,14 @@ class ScreeningResult(Base):
         JSON,
         nullable=False,
     )
-    strengths_json: Mapped[list[object]] = mapped_column(JSON, nullable=False)
-    weaknesses_json: Mapped[list[object]] = mapped_column(JSON, nullable=False)
+    strengths: Mapped[list[object]] = mapped_column(JSON, nullable=False)
+    weaknesses: Mapped[list[object]] = mapped_column(JSON, nullable=False)
     recommendation: Mapped[str] = mapped_column(String(32), nullable=False)
     tokens_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     prompt_version: Mapped[str] = mapped_column(String(128), nullable=False)
-    openai_model: Mapped[str] = mapped_column("model", String(128), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
