@@ -10,6 +10,8 @@ services:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://user:password@db:5432/app_db
+      # Required by Settings; override in .env for real OpenAI calls
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-docker-placeholder}
     depends_on:
       db:
         condition: service_healthy

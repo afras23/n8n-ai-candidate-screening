@@ -1,0 +1,32 @@
+{
+  "title": "Senior Python Developer",
+  "description": "Build backend services for our SaaS platform",
+  "requirements_json": {
+    "must_have": ["Python 3+", "FastAPI or Django", "PostgreSQL", "REST APIs"],
+    "nice_to_have": ["AWS", "Docker", "CI/CD", "Machine Learning"],
+    "experience_years": 4,
+    "education": "Computer Science or equivalent"
+  },
+  "scoring_rubric_json": {
+    "technical_skills": {
+      "weight": 0.35,
+      "description": "Relevant technical skills match"
+    },
+    "experience": {
+      "weight": 0.25,
+      "description": "Years and relevance of experience"
+    },
+    "education": {
+      "weight": 0.15,
+      "description": "Educational background alignment"
+    },
+    "cultural_fit_signals": {
+      "weight": 0.15,
+      "description": "Communication, projects, interests"
+    },
+    "certifications_extras": {
+      "weight": 0.1,
+      "description": "Certifications, languages, extras"
+    }
+  }
+}

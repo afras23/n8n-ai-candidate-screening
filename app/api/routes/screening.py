@@ -86,14 +86,9 @@ async def screen(
             ).model_dump(),
         )
 
-    normalized = response.model_dump()
-    if isinstance(normalized.get("candidate_id"), str):
-        normalized["candidate_id"] = uuid.UUID(normalized["candidate_id"])
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(
-            data=ScreeningResponse.model_validate(normalized),
-        ).model_dump(),
+        content=SuccessEnvelope(data=response).model_dump(mode="json"),
     )
 
 
@@ -125,10 +120,9 @@ async def screen_batch(
                 filename=upload.filename or "upload",
                 job_id=selected_job_id,
             )
-            normalized = response.model_dump()
-            if isinstance(normalized.get("candidate_id"), str):
-                normalized["candidate_id"] = uuid.UUID(normalized["candidate_id"])
-            results.append(ScreeningResponse.model_validate(normalized))
+            results.append(
+                ScreeningResponse.model_validate(response.model_dump(mode="json")),
+            )
         except BaseAppError as exc:
             await db.rollback()
             failures.append(
@@ -144,5 +138,5 @@ async def screen_batch(
         status_code=200,
         content=SuccessEnvelope(
             data=BatchScreeningResponse(results=results, failures=failures),
-        ).model_dump(),
+        ).model_dump(mode="json"),
     )

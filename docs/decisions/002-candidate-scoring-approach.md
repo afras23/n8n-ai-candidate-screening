@@ -16,7 +16,7 @@ We must score CVs against job requirements at scale with acceptable consistency 
 
 ## Decision
 
-Use **LLM-based scoring** with **structured output (Pydantic-validated JSON)** and a **configurable rubric** (e.g. YAML) with weighted criteria.
+Use **LLM-based scoring** with **structured output (Pydantic-validated JSON)** and a **configurable rubric** with weighted criteria. In this codebase the rubric is stored as **JSON** on `JobRequirement.scoring_rubric_json` (same logical content as a YAML rubric file, different serialization).
 
 ## Rationale
 

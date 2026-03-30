@@ -100,7 +100,7 @@ async def list_candidates(
     )
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(data=response).model_dump(),
+        content=SuccessEnvelope(data=response).model_dump(mode="json"),
     )
 
 
@@ -154,5 +154,5 @@ async def get_candidate(
     )
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(data=response).model_dump(),
+        content=SuccessEnvelope(data=response).model_dump(mode="json"),
     )

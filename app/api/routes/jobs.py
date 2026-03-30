@@ -35,7 +35,7 @@ async def list_jobs(db: Annotated[AsyncSession, Depends(get_db)]) -> JSONRespons
     ]
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(data=payload).model_dump(),
+        content=SuccessEnvelope(data=payload).model_dump(mode="json"),
     )
 
 
@@ -64,5 +64,5 @@ async def create_job(
     )
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(data=response).model_dump(),
+        content=SuccessEnvelope(data=response).model_dump(mode="json"),
     )
