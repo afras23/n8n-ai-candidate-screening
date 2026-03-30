@@ -5,8 +5,9 @@ Candidate persistence helpers (Phase 2).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate import Candidate
@@ -61,3 +62,80 @@ class CandidateRepository:
         self._session.add(candidate)
         await self._session.flush()
         return candidate
+
+    async def list_candidates(
+        self,
+        *,
+        offset: int,
+        limit: int,
+        job_id: uuid.UUID | None = None,
+        recommendation: str | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+    ) -> list[Candidate]:
+        """
+        List candidates for pagination.
+
+        Args:
+            offset: Row offset.
+            limit: Page size.
+
+        Returns:
+            Candidate rows ordered by created_at descending.
+        """
+
+        stmt = select(Candidate)
+        if created_from is not None:
+            stmt = stmt.where(Candidate.created_at >= created_from)
+        if created_to is not None:
+            stmt = stmt.where(Candidate.created_at <= created_to)
+        if job_id is not None or recommendation is not None:
+            from sqlalchemy import exists
+
+            from app.models.candidate import ScreeningResult
+
+            sub = select(ScreeningResult.id).where(
+                ScreeningResult.candidate_id == Candidate.id
+            )
+            if job_id is not None:
+                sub = sub.where(ScreeningResult.job_id == job_id)
+            if recommendation is not None:
+                sub = sub.where(ScreeningResult.recommendation == recommendation)
+            stmt = stmt.where(exists(sub))
+
+        result = await self._session.execute(
+            stmt.order_by(Candidate.created_at.desc()).offset(offset).limit(limit),
+        )
+        return list(result.scalars().all())
+
+    async def count_candidates(
+        self,
+        *,
+        job_id: uuid.UUID | None = None,
+        recommendation: str | None = None,
+    ) -> int:
+        """
+        Count total candidates.
+
+        Returns:
+            Total number of candidate rows.
+        """
+
+        stmt = select(func.count()).select_from(Candidate)
+        if job_id is not None or recommendation is not None:
+            from sqlalchemy import exists
+
+            from app.models.candidate import ScreeningResult
+
+            sub = select(ScreeningResult.id).where(
+                ScreeningResult.candidate_id == Candidate.id
+            )
+            if job_id is not None:
+                sub = sub.where(ScreeningResult.job_id == job_id)
+            if recommendation is not None:
+                sub = sub.where(ScreeningResult.recommendation == recommendation)
+            stmt = stmt.where(exists(sub))
+
+        result = await self._session.execute(stmt)
+        count_value = result.scalar_one()
+        return int(count_value)

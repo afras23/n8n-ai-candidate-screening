@@ -1,0 +1,321 @@
+{
+  "name": "Candidate Screening (Template)",
+  "nodes": [
+    {
+      "parameters": {
+        "mailbox": "INBOX",
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "email_trigger",
+      "name": "Email Trigger (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ],
+      "credentials": {
+        "imap": {
+          "id": "IMAP_CREDENTIAL_ID",
+          "name": "IMAP Credentials (configure after import)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.attachments && $json.attachments.length > 0 }}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "if_has_attachment",
+      "name": "IF — Has Attachment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const attachments = $json.attachments || [];\nconst first = attachments.find(a => (a.fileName || '').toLowerCase().endsWith('.pdf') || (a.fileName || '').toLowerCase().endsWith('.docx')) || attachments[0];\nreturn [{ json: { job_id: 'JOB_UUID_HERE', fileName: first?.fileName || 'cv', data: first?.data } }];"
+      },
+      "id": "extract_attachment",
+      "name": "Extract Attachment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://app:8000/api/v1/screen",
+        "method": "POST",
+        "responseFormat": "json",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data",
+        "options": {
+          "timeout": 60000
+        },
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "job_id",
+              "value": "={{ $json.job_id }}"
+            }
+          ]
+        }
+      },
+      "id": "http_screen",
+      "name": "HTTP Request — Call Python API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        980,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "propertyName": "={{ $json.data.recommendation }}",
+        "rules": [
+          {
+            "operation": "equal",
+            "value": "shortlist"
+          },
+          {
+            "operation": "equal",
+            "value": "review"
+          },
+          {
+            "operation": "equal",
+            "value": "reject"
+          }
+        ]
+      },
+      "id": "switch_route",
+      "name": "Switch — Route by Recommendation",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://ATS_API_BASE_URL_PLACEHOLDER/candidates",
+        "method": "POST",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\"candidate_id\": $json.data.candidate_id, \"status\": \"shortlisted\"}"
+      },
+      "id": "ats_shortlist",
+      "name": "HTTP Request — Update ATS (Shortlist)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1500,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://SLACK_WEBHOOK_URL_PLACEHOLDER",
+        "method": "POST",
+        "responseFormat": "json",
+        "jsonParameters": true,
+        "bodyParametersJson": "={\"text\": \"Candidate requires review: \" + $json.data.candidate_name + \" (score=\" + $json.data.overall_score + \")\"}"
+      },
+      "id": "slack_review",
+      "name": "HTTP Request — Flag for Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1500,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "RECRUITING_FROM_EMAIL_PLACEHOLDER",
+        "toEmail": "={{ $json.data.candidate_email || \"candidate@example.com\" }}",
+        "subject": "Application Update",
+        "text": "Thank you for applying. We will not be moving forward at this time."
+      },
+      "id": "email_reject",
+      "name": "Send Email — Rejection",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "GOOGLE_SHEET_ID_PLACEHOLDER",
+        "range": "screening_log!A:E",
+        "options": {},
+        "valueInputMode": "USER_ENTERED",
+        "dataToSend": "autoMapInputData"
+      },
+      "id": "sheets_log",
+      "name": "Google Sheets — Log Result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1760,
+        200
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets Credentials (configure after import)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { error: $json } }];"
+      },
+      "id": "error_handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "IF — Has Attachment?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Has Attachment?": {
+      "main": [
+        [
+          {
+            "node": "Extract Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Attachment": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Call Python API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Call Python API": {
+      "main": [
+        [
+          {
+            "node": "Switch — Route by Recommendation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch — Route by Recommendation": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Update ATS (Shortlist)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request — Flag for Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email — Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Update ATS (Shortlist)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request — Flag for Review": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email — Rejection": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets — Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionTimeout": 60
+  },
+  "versionId": "TEMPLATE_VERSION_ID",
+  "id": "TEMPLATE_WORKFLOW_ID"
+}
+

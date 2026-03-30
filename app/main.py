@@ -13,16 +13,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import health
+from app.api.routes import candidates, health, jobs, screening
 from app.config import settings
 from app.core.constants import API_V1_PREFIX
 from app.core.database import engine
 from app.core.exceptions import BaseAppError
-from app.core.logging_config import (
-    CorrelationIdMiddleware,
-    configure_logging,
-    get_correlation_id,
-)
+from app.core.logging_config import configure_logging, get_correlation_id
+from app.core.middleware.correlation import CorrelationIdMiddleware
+from app.core.middleware.request_logging import RequestLoggingMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +52,7 @@ def create_app() -> FastAPI:
     )
 
     application.add_middleware(CorrelationIdMiddleware)
+    application.add_middleware(RequestLoggingMiddleware)
     if settings.cors_allow_origins:
         application.add_middleware(
             CORSMiddleware,
@@ -65,6 +64,9 @@ def create_app() -> FastAPI:
 
     _register_exception_handlers(application)
     application.include_router(health.router, prefix=API_V1_PREFIX)
+    application.include_router(screening.router, prefix=API_V1_PREFIX)
+    application.include_router(candidates.router, prefix=API_V1_PREFIX)
+    application.include_router(jobs.router, prefix=API_V1_PREFIX)
     return application
 
 

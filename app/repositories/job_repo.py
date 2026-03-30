@@ -49,3 +49,18 @@ class JobRepository:
             ),
         )
         return result.scalar_one_or_none()
+
+    async def list_active(self) -> list[JobRequirement]:
+        """
+        List all active job requirements.
+
+        Returns:
+            Active job requirements sorted by creation time descending.
+        """
+
+        result = await self._session.execute(
+            select(JobRequirement)
+            .where(JobRequirement.is_active.is_(True))
+            .order_by(JobRequirement.created_at.desc()),
+        )
+        return list(result.scalars().all())
