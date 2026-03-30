@@ -7,13 +7,16 @@ Used by ``get_prompt("cv_scoring", "v1", ...)``.
 SYSTEM_PROMPT = (
     "You are an expert recruiter. Score this CV against the job "
     "requirements. Return ONLY valid JSON with: overall_score (0-100), "
-    "criteria_scores (dict of criterion → score 0-100), strengths (list of "
-    "strings), weaknesses (list of strings), recommendation "
-    "('shortlist'|'review'|'reject')."
+    "criteria_scores (dict of criterion → {score (0-100), justification}), "
+    "strengths (list of strings), weaknesses (list of strings), reasoning "
+    "(2-3 sentences), recommendation ('shortlist'|'review'|'reject')."
 )
 
 USER_PROMPT_TEMPLATE = """Job requirements (JSON):
 {job_requirements}
+
+Scoring rubric (JSON):
+{scoring_rubric}
 
 CV text:
 {cv_text}

@@ -8,6 +8,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
+from uuid import uuid5
 
 from pydantic import BaseModel
 
@@ -45,7 +46,10 @@ class MockSheetsClient:
         self._next_row = 2
 
     async def append_row(self, row: dict[str, str]) -> SheetsAppendReceipt:
-        append_id = str(uuid.uuid4())
+        deterministic_key = "|".join(
+            f"{k}={row.get(k, '')}" for k in sorted(row.keys())
+        )
+        append_id = str(uuid5(uuid.NAMESPACE_URL, f"sheets:append:{deterministic_key}"))
         now = datetime.now(UTC)
         row_number = self._next_row
         self._next_row += 1
@@ -57,7 +61,10 @@ class MockSheetsClient:
                 "sheet_tab_name": self._tab_name,
                 "row_number_value": row_number,
                 "append_id_value": append_id,
-                "row_key_count": len(row),
+                "candidate_name_value": row.get("candidate_name"),
+                "job_title_value": row.get("job_title"),
+                "overall_score_value": row.get("overall_score"),
+                "recommendation_value": row.get("recommendation"),
             },
         )
         return SheetsAppendReceipt(

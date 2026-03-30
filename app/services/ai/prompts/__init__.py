@@ -16,9 +16,11 @@ PromptBuilder = Callable[..., tuple[str, str, str]]
 
 def _build_cv_scoring(**kwargs: object) -> tuple[str, str, str]:
     job_requirements = str(kwargs.get("job_requirements", ""))
+    scoring_rubric = str(kwargs.get("scoring_rubric", ""))
     cv_text = str(kwargs.get("cv_text", ""))
     user = cv_scoring_v1.USER_PROMPT_TEMPLATE.format(
         job_requirements=job_requirements,
+        scoring_rubric=scoring_rubric,
         cv_text=cv_text,
     )
     return cv_scoring_v1.SYSTEM_PROMPT, user, cv_scoring_v1.VERSION_STRING

@@ -4,9 +4,9 @@ Screening audit and outcome persistence (Phase 2).
 
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.candidate import ScreeningResult
 
 
 class ScreeningRepository:
@@ -15,6 +15,17 @@ class ScreeningRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def record_screening_outcome(self, payload: dict[str, Any]) -> None:
-        """Insert or update a screening audit row."""
-        raise NotImplementedError("Implemented in Phase 2")
+    async def create(self, screening_result: ScreeningResult) -> ScreeningResult:
+        """
+        Persist a screening result row.
+
+        Args:
+            screening_result: ScreeningResult ORM instance.
+
+        Returns:
+            The persisted instance (with primary key populated).
+        """
+
+        self._session.add(screening_result)
+        await self._session.flush()
+        return screening_result

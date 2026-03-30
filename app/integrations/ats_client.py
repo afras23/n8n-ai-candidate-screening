@@ -10,6 +10,7 @@ import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Protocol, runtime_checkable
+from uuid import uuid5
 
 from pydantic import BaseModel, Field
 
@@ -71,7 +72,12 @@ class MockAtsClient:
         email: str,
         job_id: str,
     ) -> AtsCandidateRecord:
-        record_id = str(uuid.uuid4())
+        record_id = str(
+            uuid5(
+                uuid.NAMESPACE_URL,
+                f"ats:create:{job_id}:{email}:{name}",
+            )
+        )
         now = datetime.now(UTC)
         logger.info(
             "mock_ats_create_candidate",
@@ -108,7 +114,7 @@ class MockAtsClient:
         )
 
     async def add_note(self, candidate_id: str, note: str) -> AtsNote:
-        note_id = str(uuid.uuid4())
+        note_id = str(uuid5(uuid.NAMESPACE_URL, f"ats:note:{candidate_id}:{note}"))
         now = datetime.now(UTC)
         preview = note[:200]
         logger.info(
