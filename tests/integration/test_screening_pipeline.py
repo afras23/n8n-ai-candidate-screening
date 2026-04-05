@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from app.config import Settings
-from app.core.database import async_session_factory
 from app.integrations.ats_client import MockAtsClient
 from app.integrations.email_client import MockEmailClient
 from app.integrations.sheets_client import MockSheetsClient
@@ -21,6 +20,7 @@ from app.services.matching_service import JobMatchingService
 from app.services.parsing_service import CvParsingService
 from app.services.scoring_service import CandidateScoringService
 from app.services.screening_service import ScreeningService
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 def _settings() -> Settings:
@@ -38,9 +38,10 @@ def _settings() -> Settings:
 @pytest.mark.asyncio
 async def test_full_screening_pipeline_shortlist(
     integration_schema_ready: None,
+    integration_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     job_id = uuid.uuid4()
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         job = JobRequirement(
             id=job_id,
             title="Senior Python Developer",
@@ -100,7 +101,7 @@ async def test_full_screening_pipeline_shortlist(
         email_client=MockEmailClient(),
     )
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         response = await service.screen_candidate(
             session,
             cv_content=b"# CV text",
@@ -116,9 +117,10 @@ async def test_full_screening_pipeline_shortlist(
 @pytest.mark.asyncio
 async def test_full_screening_pipeline_reject(
     integration_schema_ready: None,
+    integration_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     job_id = uuid.uuid4()
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         job = JobRequirement(
             id=job_id,
             title="Senior Python Developer",
@@ -173,7 +175,7 @@ async def test_full_screening_pipeline_reject(
         email_client=MockEmailClient(),
     )
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         response = await service.screen_candidate(
             session,
             cv_content=b"# CV text",
@@ -187,11 +189,14 @@ async def test_full_screening_pipeline_reject(
 
 
 @pytest.mark.asyncio
-async def test_duplicate_cv_skipped(integration_schema_ready: None) -> None:
+async def test_duplicate_cv_skipped(
+    integration_schema_ready: None,
+    integration_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
     job_id = uuid.uuid4()
     cv_bytes = b"# Same CV"
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         job = JobRequirement(
             id=job_id,
             title="Senior Python Developer",
@@ -260,7 +265,7 @@ async def test_duplicate_cv_skipped(integration_schema_ready: None) -> None:
         email_client=MockEmailClient(),
     )
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         first = await service.screen_candidate(
             session,
             cv_content=cv_bytes,
@@ -269,7 +274,7 @@ async def test_duplicate_cv_skipped(integration_schema_ready: None) -> None:
         )
         await session.commit()
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         second = await service.screen_candidate(
             session,
             cv_content=cv_bytes,

@@ -9,9 +9,9 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from app.core.database import async_session_factory
 from app.models.candidate import Candidate
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 def test_alembic_migration_applies_cleanly(integration_schema_ready: None) -> None:
@@ -23,18 +23,21 @@ def test_alembic_migration_applies_cleanly(integration_schema_ready: None) -> No
 
 
 @pytest.mark.asyncio
-async def test_create_and_read_candidate_record(integration_schema_ready: None) -> None:
+async def test_create_and_read_candidate_record(
+    integration_schema_ready: None,
+    integration_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
     """Persist a candidate row and read it back with the async session factory."""
     content_hash = "integration-test-hash-001"
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         existing = await session.execute(
             select(Candidate).where(Candidate.content_hash == content_hash),
         )
         for row in existing.scalars().all():
-            session.delete(row)
+            await session.delete(row)
         await session.commit()
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         candidate = Candidate(
             name="Integration User",
             email="integration@example.com",
@@ -50,7 +53,7 @@ async def test_create_and_read_candidate_record(integration_schema_ready: None) 
         await session.refresh(candidate)
         candidate_id = candidate.id
 
-    async with async_session_factory() as session:
+    async with integration_session_factory() as session:
         loaded = await session.get(Candidate, candidate_id)
         assert loaded is not None
         assert loaded.email == "integration@example.com"
