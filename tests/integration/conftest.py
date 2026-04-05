@@ -54,7 +54,8 @@ async def integration_async_engine(
         AsyncEngine for ``DATABASE_URL``.
 
     Raises:
-        pytest.skip: If ``DATABASE_URL`` is unset (should not happen after schema fixture).
+        pytest.skip: If ``DATABASE_URL`` is unset
+        (should not happen after schema fixture).
     """
 
     database_url = os.environ.get("DATABASE_URL")
