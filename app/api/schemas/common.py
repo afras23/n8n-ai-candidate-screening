@@ -5,13 +5,11 @@ Shared API envelope schemas.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.logging_config import get_correlation_id
-
-T = TypeVar("T")
 
 
 class Metadata(BaseModel):
@@ -30,7 +28,7 @@ class Metadata(BaseModel):
     )
 
 
-class SuccessEnvelope(BaseModel, Generic[T]):
+class SuccessEnvelope[T](BaseModel):
     """Success envelope for all API responses."""
 
     model_config = ConfigDict(extra="forbid")
