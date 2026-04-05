@@ -44,3 +44,6 @@ warn_required_dynamic_aliases = true
 module = "tests.*"
 disallow_untyped_defs = false
 check_untyped_defs = true
+
+[tool.mypy]
+ignore_missing_imports = true
