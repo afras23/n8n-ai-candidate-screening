@@ -28,6 +28,7 @@ def _settings() -> Settings:
         {
             "database_url": "postgresql+asyncpg://test:test@127.0.0.1:5432/test_db",
             "openai_api_key": "sk-test",
+            "ai_model": "gpt-4o",
             "shortlist_threshold": 80,
             "review_threshold": 50,
         }

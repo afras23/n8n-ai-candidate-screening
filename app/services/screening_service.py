@@ -190,7 +190,7 @@ class ScreeningService:
             cost_usd=scoring_result.cost_usd,
             latency_ms=scoring_result.latency_ms,
             prompt_version=scoring_result.prompt_version,
-            model=self._scoring_service._llm_client._settings.ai_model,  # noqa: SLF001
+            model=self._scoring_service._settings.ai_model,  # noqa: SLF001
             created_at=datetime.now(UTC),
         )
         await screening_repo.create(screening_row)
