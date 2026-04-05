@@ -47,6 +47,25 @@ def get_screening_service() -> ScreeningService:
     return _build_screening_service()
 
 
+def _to_screening_api_model(screening_result: object) -> ScreeningResponse:
+    """
+    Map a service-layer screening result to the public API schema.
+
+    Accepts real Pydantic models (``model_dump(mode="json")``) and test doubles
+    that only implement ``model_dump()`` without keyword arguments.
+    """
+
+    model_dump = getattr(screening_result, "model_dump", None)
+    if model_dump is None:
+        msg = "screening_result must expose model_dump()"
+        raise TypeError(msg)
+    try:
+        raw_payload = model_dump(mode="json")
+    except TypeError:
+        raw_payload = model_dump()
+    return ScreeningResponse.model_validate(raw_payload)
+
+
 @router.post("/screen")
 async def screen(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -86,9 +105,10 @@ async def screen(
             ).model_dump(),
         )
 
+    api_response = _to_screening_api_model(response)
     return JSONResponse(
         status_code=200,
-        content=SuccessEnvelope(data=response).model_dump(mode="json"),
+        content=SuccessEnvelope(data=api_response).model_dump(mode="json"),
     )
 
 
@@ -120,9 +140,7 @@ async def screen_batch(
                 filename=upload.filename or "upload",
                 job_id=selected_job_id,
             )
-            results.append(
-                ScreeningResponse.model_validate(response.model_dump(mode="json")),
-            )
+            results.append(_to_screening_api_model(response))
         except BaseAppError as exc:
             await db.rollback()
             failures.append(
