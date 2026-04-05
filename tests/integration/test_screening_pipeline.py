@@ -175,10 +175,13 @@ async def test_full_screening_pipeline_reject(
         email_client=MockEmailClient(),
     )
 
+    # Distinct from shortlist test (# CV text) so shared DB is not duplicate_skipped.
+    reject_cv_bytes = b"# CV text\nreject-pipeline-" + uuid.uuid4().hex.encode("ascii")
+
     async with integration_session_factory() as session:
         response = await service.screen_candidate(
             session,
-            cv_content=b"# CV text",
+            cv_content=reject_cv_bytes,
             filename="cv.md",
             job_id=job_id,
         )
