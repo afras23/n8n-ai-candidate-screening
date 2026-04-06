@@ -4,6 +4,12 @@
 
 This workflow automates candidate CV screening by connecting your email inbox to the AI scoring API. CVs are automatically parsed, scored, routed, and logged.
 
+## Template limits
+
+The file `workflows/candidate_screening.json` is a static export. **Retry policies and HTTP/API failure handling are not embedded**—enable **Retry On Fail**, error workflows, or custom alerting on the **HTTP Request — Call Python API** node (and related nodes) in the n8n UI after import.
+
+In this export, the **Error Handler** code node is connected only from the **false** branch of **IF — Has Attachment?** (emails with no attachment). It does **not** run when the scoring HTTP request fails or the API returns an error status.
+
 ## Prerequisites
 
 - n8n instance (cloud or self-hosted)
@@ -72,8 +78,8 @@ All three branches converge on **Google Sheets — Log Result** so every outcome
 
 ### Node 8: Error Handler
 
-- **Type:** Code (in the template) — normalizes error payload; you can connect this to Slack or a second HTTP Request for alerts.
-- **Recommended:** On the **HTTP Request — Call Python API** node, enable **Retry On Fail** (once, ~30s delay). On final failure, route to Slack `#recruitment-ops` or equivalent.
+- **Type:** Code (in the template) — in the export, only receives the **no attachment** path from **IF — Has Attachment?** (`return [{ json: { error: $json } }];`). Wire follow-up nodes (Slack, HTTP) manually if you want alerts for that case.
+- **After import:** On **HTTP Request — Call Python API**, add **Retry On Fail** (e.g. once, ~30s) and error routing or an error workflow for API failures—see **Template limits** above; those settings are not stored in the JSON file.
 
 ## Deployment Options
 
@@ -150,9 +156,11 @@ Successful responses use the standard envelope: `status`, `data`, and `metadata`
 
 ## Error Handling
 
+These are **operator steps in n8n**, not part of the exported workflow JSON (see **Template limits**):
+
 - If the API returns **500** → configure the HTTP Request node to **retry once** after ~30 seconds
 - If retry fails → send a Slack alert to `#recruitment-ops` (or your ops channel)
-- If **no attachment** → the IF branch can route to Sheets with a static row such as `no CV found` (extend the “false” branch from **IF — Has Attachment?** as needed)
+- If **no attachment** → the template already routes the IF **false** branch to **Error Handler**; extend that branch (e.g. append to Sheets with `no CV found`) if you need visibility
 
 ## Monitoring
 

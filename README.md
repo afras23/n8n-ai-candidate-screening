@@ -2,7 +2,7 @@
 
 ## n8n + Python AI = Screen 200+ CVs/Week Automatically
 
-**90% less screening time** | AI scoring with rubric | ATS + Sheets + Slack sync
+**90% less screening time** | AI scoring with rubric | ATS · Sheets · Slack on review
 
 ### The Problem
 
@@ -10,7 +10,7 @@ Recruitment agencies process 200+ applications per week. Each CV takes 12–15 m
 
 ### The Solution
 
-n8n workflow orchestrates the pipeline: email trigger → CV extraction → Python AI service scores and matches → conditional routing (shortlist, review, reject) → ATS update → candidate notification → Google Sheets log.
+n8n workflow orchestrates the pipeline: **IMAP** email poll → attachment gate → HTTP call to the Python API (parse, score, match) → switch on API `recommendation` → **shortlist** updates ATS, **review** posts to Slack, **reject** sends email → every branch logs to Google Sheets (`workflows/candidate_screening.json`).
 
 The AI service uses a **configurable scoring rubric per job** (stored as JSON on `JobRequirement.scoring_rubric_json`) so different roles can weight criteria differently. **Deterministic skill matching** provides a structured second signal alongside the AI score.
 
@@ -20,25 +20,21 @@ From `docs/architecture.md`:
 
 ```mermaid
 graph TD
-    A[Email with CV] -->|IMAP/Webhook| B[n8n: Email Trigger]
-    B --> C[n8n: Extract Attachment]
-    C --> D[n8n: HTTP POST to FastAPI]
-    D --> E[Python: Parse CV]
-    E --> F[Python: AI Score + Match]
-    F --> G[n8n: Receive Score]
-    G --> H{Score Routing}
-    H -->|≥80 Shortlist| I[n8n: Update ATS]
-    H -->|50-79 Review| J[n8n: Flag for Recruiter]
-    H -->|<50 Reject| K[n8n: Send Rejection Email]
-    I --> L[n8n: Notify Recruiter via Slack]
-    J --> L
-    K --> M[n8n: Log to Google Sheets]
-    I --> M
-    J --> M
-    L --> M
-    D -->|Error| N[n8n: Error Branch]
-    N --> O[n8n: Retry + Alert]
+    A[Email with CV] -->|IMAP poll| B[n8n: IMAP Email Trigger]
+    B --> C{Has attachment?}
+    C -->|yes| D[n8n: Extract Attachment]
+    D --> E[n8n: HTTP POST /api/v1/screen]
+    E --> F[n8n: Switch on data.recommendation]
+    F -->|shortlist| G[n8n: Update ATS]
+    F -->|review| H[n8n: Slack HTTP webhook]
+    F -->|reject| I[n8n: Rejection email]
+    G --> J[n8n: Google Sheets log]
+    H --> J
+    I --> J
+    C -->|no| K[n8n: Error Handler code]
 ```
+
+Score bands (**≥80** shortlist, **50–79** review, **&lt;50** reject) are applied inside the API; n8n branches on the string `recommendation` returned in the JSON envelope. The export does not include HTTP retry, API error routing, or a webhook email trigger.
 
 Internal FastAPI pipeline:
 
@@ -67,14 +63,14 @@ flowchart LR
 4. AI scores candidate against job rubric (0–100 with per-criterion breakdown)  
 5. Deterministic matcher checks must-have requirements  
 6. Routing: **≥80** shortlist, **50–79** review, **below 50** reject (configurable via `SHORTLIST_THRESHOLD` / `REVIEW_THRESHOLD`)  
-7. ATS updated, recruiter notified (Slack), candidate emailed  
-8. Everything logged to Google Sheets  
+7. n8n template: shortlist → ATS HTTP; review → Slack HTTP; reject → email; all paths → Google Sheets  
+8. Retry, HTTP failure alerts, and extra error workflows are configured in n8n after import (see `docs/n8n-workflow.md`)  
 
 ### n8n Workflow
 
 See **[docs/n8n-workflow.md](docs/n8n-workflow.md)** for the complete setup guide.
 
-> **Note:** n8n workflow canvas screenshot to be added after deploying the workflow.
+![n8n candidate screening workflow](docs/images/n8n-workflow-canvas.png)
 
 ### Evaluation Results
 
@@ -94,14 +90,14 @@ Latest report: `eval/results/eval_2026-03-30.json` (run `make evaluate` to regen
 
 ### Key Features
 
-- n8n workflow with error handling and retry patterns (documented in workflow guide)  
+- n8n template: IMAP trigger, attachment IF, 60s workflow/HTTP timeout, switch on `recommendation`, merge to Sheets; no retry in the JSON export  
 - AI CV parsing (PDF, DOCX, text)  
 - Configurable scoring rubric per job (JSON on `JobRequirement`)  
 - Deterministic skill matching + AI scoring (dual signal)  
 - Automatic routing based on score thresholds  
 - ATS integration (**mock** — swappable for a real API)  
 - Google Sheets logging  
-- Slack notifications for recruiters (via n8n HTTP nodes)  
+- Slack notification on the **review** branch only (HTTP node placeholder in the template)  
 - Duplicate CV detection (content hash)  
 - Cost tracking per CV (configurable caps; typical eval under **$0.10** per screen in the bundled eval harness)  
 
