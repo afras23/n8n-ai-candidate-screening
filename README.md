@@ -41,8 +41,6 @@ Internal FastAPI service:
 
 See **[docs/n8n-workflow.md](docs/n8n-workflow.md)** for the complete setup guide.
 
-![n8n candidate screening workflow](docs/images/n8n-workflow-canvas.png)
-
 ### Evaluation Results
 
 Latest report: `docs/evaluation/results/eval_2026-03-30.json` (run `make evaluate` to regenerate).
