@@ -49,7 +49,9 @@ def test_workflow_has_expected_chain_and_routing_graph() -> None:
     assert isinstance(connections, dict)
 
     nodes_by_name = {
-        node.get("name"): node for node in nodes if isinstance(node, dict) and node.get("name")
+        node.get("name"): node
+        for node in nodes
+        if isinstance(node, dict) and node.get("name")
     }
 
     # Expected chain in the exported template:
