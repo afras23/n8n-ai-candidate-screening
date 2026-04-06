@@ -76,7 +76,7 @@ See **[docs/n8n-workflow.md](docs/n8n-workflow.md)** for the complete setup guid
 
 ### Evaluation Results
 
-Latest report: `eval/results/eval_2026-03-30.json` (run `make evaluate` to regenerate).
+Latest report: `docs/evaluation/results/eval_2026-03-30.json` (run `make evaluate` to regenerate).
 
 | Metric | Value |
 |--------|--------|
