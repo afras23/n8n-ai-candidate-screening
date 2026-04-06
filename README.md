@@ -18,11 +18,13 @@ The AI service uses a **configurable scoring rubric per job** (stored as JSON on
 
 ### Architecture
 
-![System architecture — n8n orchestration](docs/images/architecture-overview.png)
+Actual n8n workflow:
+
+![n8n candidate screening workflow](docs/images/n8n-workflow-canvas.png)
+
+Internal FastAPI service:
 
 ![System architecture — FastAPI service](docs/images/architecture-fastapi.png)
-
-Score bands (**≥80** shortlist, **50–79** review, **&lt;50** reject) are applied inside the API; n8n branches on the string `recommendation` returned in the JSON envelope. The export does not include HTTP retry, API error routing, or a webhook email trigger.
 
 ### How It Works
 
