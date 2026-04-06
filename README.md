@@ -18,7 +18,7 @@ The AI service uses a **configurable scoring rubric per job** (stored as JSON on
 
 ### Architecture
 
-Actual n8n workflow:
+n8n workflow:
 
 ![n8n candidate screening workflow](docs/images/n8n-workflow-canvas.png)
 
