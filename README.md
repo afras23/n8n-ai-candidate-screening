@@ -18,6 +18,10 @@ The AI service uses a **configurable scoring rubric per job** (stored as JSON on
 
 ### Architecture
 
+![System architecture — n8n orchestration](docs/images/architecture-overview.png)
+
+![System architecture — FastAPI service](docs/images/architecture-fastapi.png)
+
 From `docs/architecture.md`:
 
 ```mermaid
