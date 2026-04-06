@@ -1,5 +1,7 @@
 # AI-Powered Candidate Screening Pipeline
 
+![CI](https://github.com/afras23/n8n-ai-candidate-screening/actions/workflows/ci.yml/badge.svg)
+
 ## n8n + Python AI = Screen 200+ CVs/Week Automatically
 
 **90% less screening time** | AI scoring with rubric | ATS · Sheets · Slack on review
