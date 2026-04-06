@@ -22,44 +22,7 @@ The AI service uses a **configurable scoring rubric per job** (stored as JSON on
 
 ![System architecture — FastAPI service](docs/images/architecture-fastapi.png)
 
-From `docs/architecture.md`:
-
-```mermaid
-graph TD
-    A[Email with CV] -->|IMAP poll| B[n8n: IMAP Email Trigger]
-    B --> C{Has attachment?}
-    C -->|yes| D[n8n: Extract Attachment]
-    D --> E[n8n: HTTP POST /api/v1/screen]
-    E --> F[n8n: Switch on data.recommendation]
-    F -->|shortlist| G[n8n: Update ATS]
-    F -->|review| H[n8n: Slack HTTP webhook]
-    F -->|reject| I[n8n: Rejection email]
-    G --> J[n8n: Google Sheets log]
-    H --> J
-    I --> J
-    C -->|no| K[n8n: Error Handler code]
-```
-
 Score bands (**≥80** shortlist, **50–79** review, **&lt;50** reject) are applied inside the API; n8n branches on the string `recommendation` returned in the JSON envelope. The export does not include HTTP retry, API error routing, or a webhook email trigger.
-
-Internal FastAPI pipeline:
-
-```mermaid
-flowchart LR
-    subgraph FastAPI["FastAPI service"]
-        R[Routes: validate HTTP + map to DTOs]
-        S[Screening service: orchestration]
-        P[CV parser: PDF/DOCX → structured text]
-        A[AI scorer: text + rubric → score + breakdown]
-        M[Job matcher: profile vs job requirements]
-        F[Response formatter: Pydantic API models]
-        R --> S
-        S --> P
-        S --> A
-        S --> M
-        S --> F
-    end
-```
 
 ### How It Works
 
